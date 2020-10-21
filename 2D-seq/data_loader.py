@@ -31,7 +31,7 @@ def get_data_loaders(batch_size, download=False, dummy=False):
     data_train = VOCSegmentation('./data', year = "2012", image_set="train",
                        download=download,
                        transform=transforms.Compose([transforms.ToTensor()]))
-    data_test = MNIST('./data', year = "2012", image_set="val",
+    data_test = VOCSegmentation('./data', year = "2012", image_set="val",
                       download=download,
                       transform=transforms.Compose([transforms.ToTensor()]))
 
