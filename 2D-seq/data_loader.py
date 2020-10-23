@@ -4,6 +4,7 @@ import numpy as np
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import VOCSegmentation
+from torchvision.transforms.transforms import Grayscale
 
 import distdl
 
@@ -13,7 +14,7 @@ def my_collate(batch):
     data = [item[0] for item in batch]
     target = [item[1] for item in batch]
     return [data,target]
-    
+
 class DummyLoader:
 
     def __init__(self, batch_size, n_data_points):
@@ -37,11 +38,13 @@ def get_data_loaders(batch_size, download=False, dummy=False):
     data_train = VOCSegmentation('./data', year = "2012", image_set="train",
                        download=download,
                        transform=transforms.Compose([
+                           transforms.Grayscale(),
                            transforms.ToTensor()
                            ]))
     data_test = VOCSegmentation('./data', year = "2012", image_set="val",
                       download=download,
                       transform=transforms.Compose([
+                          transforms.Grayscale(),
                           transforms.ToTensor()
                           ]))
 

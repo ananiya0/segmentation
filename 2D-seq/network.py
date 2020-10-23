@@ -8,10 +8,6 @@ import torch.nn.functional as fnn
 import torch.optim as optim
 
 train, test = get_data_loaders(10,download=False,dummy=False)
-for data in train:
-    x,y = data
-    print(x[1].size())
-    break
 
 #double 3x3 convolution 
 def dual_conv(in_channel, out_channel):
@@ -95,7 +91,20 @@ class Unet(nn.Module):
         
         return x
 
-if __name__ == '__main__':
-    image = torch.rand((1, 1, 572, 572))
-    model = Unet()
-    model(image)
+
+Unet = Unet()
+optimizer = optim.Adam(Unet.parameters(),lr=0.1)
+EPOCHS = 3
+for epoch in range(EPOCHS):
+    for data in train:
+        x,y = data
+        for i in range(len(x)):
+            optimizer.zero_grad()
+            output = Unet(x[i][None,:,:,:])
+            loss = fnn.nll_loss(output,y)
+            loss.backward()
+            optimizer.step()
+            print(output)
+            break
+        break
+    break
