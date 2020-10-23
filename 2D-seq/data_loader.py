@@ -8,6 +8,12 @@ from torchvision.datasets import VOCSegmentation
 import distdl
 
 
+#custom collate_fn
+def my_collate(batch):
+    data = [item[0] for item in batch]
+    target = [item[1] for item in batch]
+    return [data,target]
+    
 class DummyLoader:
 
     def __init__(self, batch_size, n_data_points):
@@ -30,18 +36,24 @@ def get_data_loaders(batch_size, download=False, dummy=False):
 
     data_train = VOCSegmentation('./data', year = "2012", image_set="train",
                        download=download,
-                       transform=transforms.Compose([transforms.ToTensor()]))
+                       transform=transforms.Compose([
+                           transforms.ToTensor()
+                           ]))
     data_test = VOCSegmentation('./data', year = "2012", image_set="val",
                       download=download,
-                      transform=transforms.Compose([transforms.ToTensor()]))
+                      transform=transforms.Compose([
+                          transforms.ToTensor()
+                          ]))
 
     if not dummy:
         train_loader = DataLoader(data_train,
                                   batch_size=batch_size,
                                   shuffle=True,
+                                  collate_fn=my_collate,
                                   num_workers=0)
         test_loader = DataLoader(data_test,
                                  batch_size=batch_size,
+                                 collate_fn=my_collate,
                                  num_workers=0)
     else:
         train_loader = DummyLoader(batch_size, 60000)
