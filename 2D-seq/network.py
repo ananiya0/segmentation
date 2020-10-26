@@ -3,6 +3,7 @@ import torch
 import torchvision
 from torchvision import transforms, datasets
 from data_loader import get_data_loaders
+from torchvision.utils import save_image
 import torch.nn as nn
 import torch.nn.functional as fnn
 import torch.optim as optim
@@ -12,9 +13,9 @@ train, test = get_data_loaders(10,download=False,dummy=False)
 #double 3x3 convolution 
 def dual_conv(in_channel, out_channel):
     conv = nn.Sequential(
-        nn.Conv2d(in_channel, out_channel, kernel_size=3),
+        nn.Conv2d(in_channel, out_channel, kernel_size=3,padding=1),
         nn.ReLU(inplace= True),
-        nn.Conv2d(out_channel, out_channel, kernel_size=3),
+        nn.Conv2d(out_channel, out_channel, kernel_size=3,padding=1),
         nn.ReLU(inplace= True),
     )
     return conv
@@ -35,26 +36,28 @@ class Unet(nn.Module):
         super(Unet, self).__init__()
 
         # Left side (contracting path)
-        self.dwn_conv1 = dual_conv(1, 64)
+        self.dwn_conv1 = dual_conv(3, 64)
         self.dwn_conv2 = dual_conv(64, 128)
         self.dwn_conv3 = dual_conv(128, 256)
         self.dwn_conv4 = dual_conv(256, 512)
         self.dwn_conv5 = dual_conv(512, 1024)
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        #Right side  (expnsion path) 
+        #Right side  (expansion path) 
         #transpose convolution is used showna as green arrow in architecture image
-        self.trans1 = nn.ConvTranspose2d(1024,512, kernel_size=2, stride= 2)
+        self.trans1 = nn.ConvTranspose2d(1024,512, kernel_size=2, stride=2)
         self.up_conv1 = dual_conv(1024,512)
-        self.trans2 = nn.ConvTranspose2d(512,256, kernel_size=2, stride= 2)
+        self.trans2 = nn.ConvTranspose2d(512,256, kernel_size=2, stride=2)
         self.up_conv2 = dual_conv(512,256)
-        self.trans3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride= 2)
+        self.trans3 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
         self.up_conv3 = dual_conv(256,128)
-        self.trans4 = nn.ConvTranspose2d(128,64, kernel_size=2, stride= 2)
+        self.trans4 = nn.ConvTranspose2d(128,64, kernel_size=2, stride=2)
         self.up_conv4 = dual_conv(128,64)
 
         #output layer
-        self.out = nn.Conv2d(64, 2, kernel_size=1)
+        self.last = nn.Conv2d(64, 2, kernel_size=1)
+        # Not sure if output should be 2 channels or 1
+        self.out = nn.Conv2d(2, 1, kernel_size=1)
 
     def forward(self, image):
 
@@ -72,21 +75,22 @@ class Unet(nn.Module):
 
         #forward pass for Right side
         x = self.trans1(x9)
-        y = crop_tensor(x, x7)
-        x = self.up_conv1(torch.cat([x,y], 1))
-
+        #y = crop_tensor(x, x7)
+        x = self.up_conv1(torch.cat([x,x7], 1))
+        
         x = self.trans2(x)
-        y = crop_tensor(x, x5)
-        x = self.up_conv2(torch.cat([x,y], 1))
+        #y = crop_tensor(x, x5)
+        x = self.up_conv2(torch.cat([x,x5], 1))
 
         x = self.trans3(x)
-        y = crop_tensor(x, x3)
-        x = self.up_conv3(torch.cat([x,y], 1))
+        #y = crop_tensor(x, x3)
+        x = self.up_conv3(torch.cat([x,x3], 1))
 
         x = self.trans4(x)
-        y = crop_tensor(x, x1)
-        x = self.up_conv4(torch.cat([x,y], 1))
+        #y = crop_tensor(x, x1)
+        x = self.up_conv4(torch.cat([x,x1], 1))
         
+        x = self.last(x)
         x = self.out(x)
         
         return x
@@ -98,13 +102,17 @@ EPOCHS = 3
 for epoch in range(EPOCHS):
     for data in train:
         x,y = data
-        for i in range(len(x)):
-            optimizer.zero_grad()
-            output = Unet(x[i][None,:,:,:])
-            loss = fnn.nll_loss(output,y)
-            loss.backward()
-            optimizer.step()
-            print(output)
-            break
+        optimizer.zero_grad()
+        output = Unet(x)
+        #save_image(y[0],"img.png")
+        #save_image(output[0],"out.png")
+        #y = (y>0.5)
+        criterion = nn.BCEWithLogitsLoss()
+        loss = criterion(output,y)
+        loss.backward()
+        optimizer.step()
+        print(loss)
         break
-    break
+        
+        
+
