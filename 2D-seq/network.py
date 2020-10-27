@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as fnn
 import torch.optim as optim
 
-train, test = get_data_loaders(10,download=False,dummy=False)
+train, test = get_data_loaders(5,download=False,dummy=False)
 
 #double 3x3 convolution 
 def dual_conv(in_channel, out_channel):
@@ -55,9 +55,7 @@ class Unet(nn.Module):
         self.up_conv4 = dual_conv(128,64)
 
         #output layer
-        self.last = nn.Conv2d(64, 2, kernel_size=1)
-        # Not sure if output should be 2 channels or 1
-        self.out = nn.Conv2d(2, 1, kernel_size=1)
+        self.out = nn.Conv2d(64, 2, kernel_size=1)
 
     def forward(self, image):
 
@@ -90,14 +88,13 @@ class Unet(nn.Module):
         #y = crop_tensor(x, x1)
         x = self.up_conv4(torch.cat([x,x1], 1))
         
-        x = self.last(x)
         x = self.out(x)
         
         return x
 
 
 Unet = Unet()
-optimizer = optim.Adam(Unet.parameters(),lr=0.1)
+optimizer = optim.Adam(Unet.parameters(),lr=0.05)
 EPOCHS = 3
 for epoch in range(EPOCHS):
     for data in train:
@@ -106,13 +103,16 @@ for epoch in range(EPOCHS):
         output = Unet(x)
         #save_image(y[0],"img.png")
         #save_image(output[0],"out.png")
-        #y = (y>0.5)
-        criterion = nn.BCEWithLogitsLoss()
+        y = (y>0.5).long().squeeze(1)
+        s = nn.Softmax(dim=1)
+        output = s(output)
+        criterion = nn.CrossEntropyLoss()
         loss = criterion(output,y)
         loss.backward()
         optimizer.step()
         print(loss)
         break
+        
         
         
 
