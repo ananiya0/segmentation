@@ -1,35 +1,53 @@
 # Adapted from https://github.com/spctr01/UNet/blob/master/Unet.py
+from PIL.Image import NEAREST
 import torch
 import torchvision
 from torchvision import transforms, datasets
+from torchvision.transforms.transforms import Grayscale, Resize
 from data_loader import get_data_loaders
 from torchvision.utils import save_image
 import torch.nn as nn
 import torch.nn.functional as fnn
 import torch.optim as optim
+from cvcloader import CVC
 
-train, test = get_data_loaders(5,download=False,dummy=False)
+def dice_loss(input, target):
+    smooth = 1.
+
+    iflat = input.view(-1)
+    tflat = target.view(-1)
+    intersection = (iflat * tflat).sum()
+    
+    return 1 - ((2. * intersection + smooth) /
+              (iflat.sum() + tflat.sum() + smooth))
+
+
+transform = transforms.Compose([
+    transforms.Resize([256,256]),
+    transforms.ToTensor(),
+])
+
+target_transform = transforms.Compose([
+    transforms.Grayscale(),
+    transforms.Resize([256,256],interpolation=NEAREST),
+    transforms.ToTensor(),
+])
+
+train = CVC("./CVC/train/Original", "./CVC/train/Ground Truth", 
+    transform=transform,target_transform=target_transform)
 
 #double 3x3 convolution 
 def dual_conv(in_channel, out_channel):
     conv = nn.Sequential(
         nn.Conv2d(in_channel, out_channel, kernel_size=3,padding=1),
+        nn.BatchNorm2d(out_channel),
         nn.ReLU(inplace= True),
         nn.Conv2d(out_channel, out_channel, kernel_size=3,padding=1),
+        nn.BatchNorm2d(out_channel),
         nn.ReLU(inplace= True),
     )
     return conv
 
-
-# crop the image(tensor) to equal size 
-# as shown in architecture image , half left side image is concated with right side image
-def crop_tensor(target_tensor, tensor):
-    target_size = target_tensor.size()[2]
-    tensor_size = tensor.size()[2]
-    delta = tensor_size - target_size
-    delta = delta // 2
-
-    return tensor[:, :, delta:tensor_size- delta, delta:tensor_size-delta]
 
 class Unet(nn.Module):
     def __init__(self):
@@ -55,7 +73,8 @@ class Unet(nn.Module):
         self.up_conv4 = dual_conv(128,64)
 
         #output layer
-        self.out = nn.Conv2d(64, 2, kernel_size=1)
+        self.out = nn.Conv2d(64, 1, kernel_size=1)
+        #self.last = nn.Softmax(dim=1)
 
     def forward(self, image):
 
@@ -73,45 +92,43 @@ class Unet(nn.Module):
 
         #forward pass for Right side
         x = self.trans1(x9)
-        #y = crop_tensor(x, x7)
         x = self.up_conv1(torch.cat([x,x7], 1))
         
         x = self.trans2(x)
-        #y = crop_tensor(x, x5)
         x = self.up_conv2(torch.cat([x,x5], 1))
 
         x = self.trans3(x)
-        #y = crop_tensor(x, x3)
         x = self.up_conv3(torch.cat([x,x3], 1))
 
         x = self.trans4(x)
-        #y = crop_tensor(x, x1)
         x = self.up_conv4(torch.cat([x,x1], 1))
         
         x = self.out(x)
+        #x = self.last(x)
         
         return x
 
 
 Unet = Unet()
-optimizer = optim.Adam(Unet.parameters(),lr=0.05)
-EPOCHS = 3
+optimizer = optim.Adam(Unet.parameters(),lr=0.0001)
+EPOCHS = 1
 for epoch in range(EPOCHS):
     for data in train:
         x,y = data
         optimizer.zero_grad()
         output = Unet(x)
-        #save_image(y[0],"img.png")
-        #save_image(output[0],"out.png")
-        y = (y>0.5).long().squeeze(1)
-        s = nn.Softmax(dim=1)
-        output = s(output)
-        criterion = nn.CrossEntropyLoss()
+        criterion = nn.BCEWithLogitsLoss()
+        y = y[None,:,:,:]
         loss = criterion(output,y)
+        #print(dice_loss(output,y))
         loss.backward()
         optimizer.step()
         print(loss)
-        break
+        save_image(x,"img.png")
+        save_image(output,"pred.png")
+        save_image(y,"mask.png")
+        
+        
         
         
         
