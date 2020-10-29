@@ -1,6 +1,7 @@
 # Adapted from https://github.com/spctr01/UNet/blob/master/Unet.py
 from PIL.Image import NEAREST
 import torch
+from torch.utils.data.dataloader import DataLoader
 import torchvision
 from torchvision import transforms, datasets
 from torchvision.transforms.transforms import Grayscale, Resize
@@ -33,8 +34,10 @@ target_transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-train = CVC("./CVC/train/Original", "./CVC/train/Ground Truth", 
+train_data = CVC("./CVC/train/Original", "./CVC/train/Ground Truth", 
     transform=transform,target_transform=target_transform)
+
+train = DataLoader(train_data,batch_size=1,shuffle=True)
 
 #double 3x3 convolution 
 def dual_conv(in_channel, out_channel):
@@ -111,14 +114,14 @@ class Unet(nn.Module):
 
 Unet = Unet()
 optimizer = optim.Adam(Unet.parameters(),lr=0.0001)
-EPOCHS = 1
+EPOCHS = 3
 for epoch in range(EPOCHS):
     for data in train:
         x,y = data
         optimizer.zero_grad()
         output = Unet(x)
         criterion = nn.BCEWithLogitsLoss()
-        y = y[None,:,:,:]
+        #y = y[None,:,:,:]
         loss = criterion(output,y)
         #print(dice_loss(output,y))
         loss.backward()
