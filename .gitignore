@@ -1,5 +1,5 @@
 practice/data/
-practice/slurm-*
+*slurm-*
 2D-seq/data/
-2D-seq/slurm-*
-2D-seq/CVC/
+2D-seq/*.png
+*.vscode/

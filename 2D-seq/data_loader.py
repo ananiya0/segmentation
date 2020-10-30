@@ -7,7 +7,6 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets import VOCSegmentation
 
-import distdl
 
 
 #custom collate_fn

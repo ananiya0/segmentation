@@ -1,8 +1,6 @@
 import os
 from PIL import Image
 from torch.utils.data.dataset import Dataset
-from torchvision import transforms,datasets
-from torchvision.utils import save_image
 
 class CVC(Dataset):
     def __init__(self, img_dir, mask_dir, transform=None, target_transform=None):
@@ -21,7 +19,7 @@ class CVC(Dataset):
         mask_loc = os.path.join(self.mask_dir, self.masks[idx])
         image = Image.open(img_loc)
         mask = Image.open(mask_loc)
-        tensor_image = self.transform(image)[None,:,:,:]
-        tensor_mask = self.target_transform(mask)[None:,:,:]
+        tensor_image = self.transform(image)
+        tensor_mask = self.target_transform(mask)
         return tensor_image, tensor_mask
 

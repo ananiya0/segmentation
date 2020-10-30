@@ -1,43 +1,7 @@
 # Adapted from https://github.com/spctr01/UNet/blob/master/Unet.py
-from PIL.Image import NEAREST
 import torch
-from torch.utils.data.dataloader import DataLoader
-import torchvision
-from torchvision import transforms, datasets
-from torchvision.transforms.transforms import Grayscale, Resize
-from data_loader import get_data_loaders
-from torchvision.utils import save_image
 import torch.nn as nn
-import torch.nn.functional as fnn
-import torch.optim as optim
-from cvcloader import CVC
 
-def dice_loss(input, target):
-    smooth = 1.
-
-    iflat = input.view(-1)
-    tflat = target.view(-1)
-    intersection = (iflat * tflat).sum()
-    
-    return 1 - ((2. * intersection + smooth) /
-              (iflat.sum() + tflat.sum() + smooth))
-
-
-transform = transforms.Compose([
-    transforms.Resize([256,256]),
-    transforms.ToTensor(),
-])
-
-target_transform = transforms.Compose([
-    transforms.Grayscale(),
-    transforms.Resize([256,256],interpolation=NEAREST),
-    transforms.ToTensor(),
-])
-
-train_data = CVC("./CVC/train/Original", "./CVC/train/Ground Truth", 
-    transform=transform,target_transform=target_transform)
-
-train = DataLoader(train_data,batch_size=1,shuffle=True)
 
 #double 3x3 convolution 
 def dual_conv(in_channel, out_channel):
@@ -110,29 +74,7 @@ class Unet(nn.Module):
         #x = self.last(x)
         
         return x
-
-
-Unet = Unet()
-optimizer = optim.Adam(Unet.parameters(),lr=0.0001)
-EPOCHS = 3
-for epoch in range(EPOCHS):
-    for data in train:
-        x,y = data
-        optimizer.zero_grad()
-        output = Unet(x)
-        criterion = nn.BCEWithLogitsLoss()
-        #y = y[None,:,:,:]
-        loss = criterion(output,y)
-        #print(dice_loss(output,y))
-        loss.backward()
-        optimizer.step()
-        print(loss)
-        save_image(x,"img.png")
-        save_image(output,"pred.png")
-        save_image(y,"mask.png")
-        
-        
-        
+       
         
         
 
