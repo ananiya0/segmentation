@@ -5,9 +5,9 @@ import sys
 import torch
 from dist_data_handler import get_data_loaders
 from mpi4py import MPI
-from network import generate distributed_network
+from network import gen_dist_net
 
-P_base, Unet_dist = generate_distributed_network()
+P_base, Unet_dist = gen_dist_net()
 
 max_batch_size = 256
 

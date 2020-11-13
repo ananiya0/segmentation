@@ -22,6 +22,7 @@ class DistributedNetworkOutputFunction(torch.autograd.Function):
 		partition = ctx.partition
 
 		if partition.rank == 0:
+			return grad_output.clone(), None
 
 		else:
 			return NoneTensor(), None
