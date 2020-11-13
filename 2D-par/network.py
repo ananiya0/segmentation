@@ -67,7 +67,4 @@ def gen_dist_net():
 							    scale_factor=None,
 							    mode='linear',
 							    align_corners=False),
-			      torch.nn.ReLU(),
- 
-
-
+			      torch.nn.ReLU())
