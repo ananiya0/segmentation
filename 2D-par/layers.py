@@ -34,3 +34,26 @@ class DistributedNetworkOutput(torch.nn.Module):
 
 	def forward(self, input):
 		return DistributedNetworkOutputFunction.apply(input, self.partition)
+
+# Set of layers implemented in Unet that occurs frequently
+def dist_dual_conv(P_conv, in_channel, out_channel):
+	conv = torch.nn.Sequential(
+		distdl.nn.DistributedConv2d(P_conv,
+					    in_channels = in_channel,
+					    out_channels = out_channel,
+					    kernel_size=(3,3),
+					    padding=(1,1)),
+		# REPLACE W UPSCALING LATER
+		distdl.nn.DistributedBatchNorm(P_conv, num_features=1),
+		torch.nn.ReLU(),
+		distdl.nn.DistributedConv2d(P_conv,
+                                            in_channels = in_channel,
+                                            out_channels = out_channel,
+                                            kernel_size=(3,3),
+                                            padding=(1,1)),
+		# REPLACE W UPSCALING LATER
+		distdl.nn.DistributedBatchNorm(P_conv, num_features=1),
+		torch.nn.ReLU()
+	)
+
+	return conv
