@@ -44,30 +44,30 @@ def gen_dist_net():
     """
 
     net = torch.nn.Sequential(distdl.nn.DistributedConv2d(P_conv, # Do I need a distributed transpose first?
-							  in_channels=3,
-							  out_channels=64,
-							  kernel_size=(3,3),
-							  padding=(1,1)),
-			      # IDK HOW TO BATCH NORM, we need to replace that placeholder with
-			      # an object that i don't really understand check out the docs
-			      # We could also just do a distributed batchnorm i think
-			      distdl.nn.DistributedUpsample(P_conv,
+							  							in_channels=3,
+							  							out_channels=64,
+							  							kernel_size=(3,3),
+							  							padding=(1,1)),
+			    	# IDK HOW TO BATCH NORM, we need to replace that placeholder with
+			    	# an object that i don't really understand check out the docs
+			    	# We could also just do a distributed batchnorm i think
+			    	distdl.nn.DistributedUpsample(P_conv,
+								buffer_manager=None,
+							    size=None,
+							    scale_factor=None,
+							    mode='linear',
+							    align_corners=False),
+			      	torch.nn.ReLU(),
+			      	distdl.nn.DistributedConv2d(P_conv,
+                                                in_channels=64,
+                                                out_channels=64,
+                                                kernel_size=(3,3),
+                                                padding=(1,1)),
+			      	# NEEDS ANOTHER BATCH NORM
+			      	distdl.nn.DistributedUpsample(P_conv,
 							    buffer_manager=None,
 							    size=None,
 							    scale_factor=None,
 							    mode='linear',
 							    align_corners=False),
-			      torch.nn.ReLU(),
-			      distdl.nn.DistributedConv2d(P_conv,
-                                                          in_channels=64,
-                                                          out_channels=64,
-                                                          kernel_size=(3,3),
-                                                          padding=(1,1)),
-			      # NEEDS ANOTHER BATCH NORM
-			      distdl.nn.DistributedUpsample(P_conv,
-							    buffer_manager=None,
-							    size=None,
-							    scale_factor=None,
-							    mode='linear',
-							    align_corners=False),
-			      torch.nn.ReLU())
+			      	torch.nn.ReLU())
