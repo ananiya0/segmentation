@@ -119,6 +119,7 @@ def gen_dist_net():
 							  padding=(1,1)),
 			      # IDK HOW TO BATCH NORM, we need to replace that placeholder with
 			      # an object that i don't really understand check out the docs
+			      # We could also just do a distributed batchnorm i think
 			      distdl.nn.DistributedUpsample(P_conv, PLACEHOLDER),
 			      torch.nn.ReLU(),
 			      distdl.nn.DistributedConv2d(P_conv,
