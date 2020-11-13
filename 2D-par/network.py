@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from mpi4py import MPI
 import distdl
+from layers import dist_dual_conv
 
 
 def gen_dist_net():
@@ -26,11 +27,11 @@ def gen_dist_net():
 
     # Layers needed as given in 2D seq example
     P_conv = P_base.create_cartesian_topology_partition([1, 1, 2, 2])
-	# I believe we will need to define a dist batch norm operation but I am not
-	# sure how this would come into place here.
-    P_fc_in = P_base_lo.create_cartesian_topology_partition([1, 2])
-    P_fc_out = P_base_hi.create_cartesian_topology_partition([1, 2])
-    P_fc_mtx = P_base.create_cartesian_topology_partition([2, 2])
+
+    # I think we won't need these because we aren't dealing with flatten aat all
+    #P_fc_in = P_base_lo.create_cartesian_topology_partition([1, 2])
+    #P_fc_out = P_base_hi.create_cartesian_topology_partition([1, 2])
+    #P_fc_mtx = P_base.create_cartesian_topology_partition([2, 2])
 
 	
     """
@@ -43,58 +44,25 @@ def gen_dist_net():
 	relu
     """
 
-    net = torch.nn.Sequential(distdl.nn.DistributedConv2d(P_conv, # Do I need a distributed transpose first?
-							  							in_channels=3,
-							  							out_channels=64,
-							  							kernel_size=(3,3),
-							  							padding=(1,1)),
-			    	# IDK HOW TO BATCH NORM, we need to replace that placeholder with
-			    	# an object that i don't really understand check out the docs
-			    	# We could also just do a distributed batchnorm i think
-			    	distdl.nn.DistributedUpsample(P_conv,
-								buffer_manager=None,
-							    size=None,
-							    scale_factor=None,
-							    mode='linear',
-							    align_corners=False),
-			      	torch.nn.ReLU(),
-					distdl.nn.DistributedMaxPool2d(P_conv,
-                                                kernel_size=(2, 2),
-                                                stride=(2, 2)),
-			      	distdl.nn.DistributedConv2d(P_conv,
-                                                in_channels=64,
-                                                out_channels=64,
-                                                kernel_size=(3,3),
-                                                padding=(1,1)),
-			      	# NEEDS ANOTHER BATCH NORM
-			      	distdl.nn.DistributedUpsample(P_conv,
-							    buffer_manager=None,
-							    size=None,
-							    scale_factor=None,
-							    mode='linear',
-							    align_corners=False),
-			      	torch.nn.ReLU(),
-					distdl.nn.DistributedMaxPool2d(P_conv,
-                                                kernel_size=(2, 2),
-                                                stride=(2, 2)),
-					distdl.nn.DistributedLinear(P_fc_in,
-                                                P_fc_out,
-                                                P_fc_mtx,
-                                                400, 120),
-                    torch.nn.ReLU(),
-					# Reverse order of P_fc_in and P_fc_out to avoid a transpose
-                	distdl.nn.DistributedLinear(P_fc_out,
-                                                P_fc_in,
-                                                P_fc_mtx,
-                                                120, 84),
-                    torch.nn.ReLU(),
-                    distdl.nn.DistributedLinear(P_fc_in,
-                                                P_fc_out,
-                                                P_fc_mtx,
-                                                84, 10),
-                    distdl.nn.DistributedTranspose(P_fc_out,
-                                                   P_root_2d),
-                    torch.nn.Sigmoid(),
-                    DistributedNetworkOutput(P_root_2d))
-
-	return P_base, net
+    # Beginning of the left-hand side
+    net = torch.nn.Sequential(dist_dual_conv(P_conv, 3, 64),
+        dist_dual_conv(P_conv, 64, 128),
+	dist_dual_conv(P_conv, 128, 256),
+	dist_dual_conv(P_conv, 256, 512),
+	dist_dual_conv(P_conv, 512, 1024), 
+	distdl.nn.DistributedMaxPool2d(P_conv,
+            kernel_size=(2, 2),
+            stride=(2, 2)), # Beginning of the right-hand side
+        distdl.nn.DistributedUpsample(P_conv),
+	dist_dual_conv(P_conv, 1024, 512),
+        distdl.nn.DistributedUpsample(P_conv),
+        dist_dual_conv(P_conv, 512, 256),
+	distdl.nn.DistributedUpsample(P_conv),
+        dist_dual_conv(P_conv, 256, 128),
+	distdl.nn.DistributedUpsample(P_conv),
+	dist_dual_conv(P_conv, 128, 64),
+	
+	# OUTPUT LAYER
+	distdl.DistributedConv2d(64,1, kernel_size=(1,1))
+    )
+    return P_base, net
