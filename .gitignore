@@ -3,3 +3,4 @@ practice/data/
 2D-seq/data/
 2D-seq/*.png
 *.vscode/
+*.pt
