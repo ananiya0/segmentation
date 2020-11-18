@@ -7,13 +7,15 @@ from dist_data_handler import get_data_loaders
 from mpi4py import MPI
 from network import gen_dist_net
 
-P_base, Unet_dist = gen_dist_net()
+Unet_dist = gen_dist_net()
 
 max_batch_size = 256
 
 n_epochs = 10
 
 loud = True
+
+P_base = Unet_dist.P_base
 
 MPI.COMM_WORLD.Barrier() 
 
