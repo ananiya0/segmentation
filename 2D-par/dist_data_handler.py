@@ -5,6 +5,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 from torchvision.datasets.mnist import MNIST
 from cvc_load import CVC
+from PIL.Image import NEAREST
 
 import distdl
 
@@ -28,15 +29,24 @@ class DummyLoader:
 
 
 def get_data_loaders(batch_size, download=False, dummy=False):
+    transform = transforms.Compose([
+        transforms.Resize([256,256]),
+        transforms.ToTensor(),
+    ])
 
-    data_train = CVC('../CVC_data/mnist',
-                       download=download,
-                       transform=transforms.Compose([transforms.ToTensor()]))
+    target_transform = transforms.Compose([
+        transforms.Grayscale(),
+        transforms.Resize([256,256],interpolation=NEAREST),
+        transforms.ToTensor(),
+    ])
 
-    data_test = CVC('../CVC_data/mnist',
-                      train=False,
-                      download=download,
-                      transform=transforms.Compose([transforms.ToTensor()]))
+    data_train = CVC('../CVC_data/train/Original',
+                       '../CVC_data/train/Ground Truth',
+                       transform=transform, target_transform=target_transform)
+
+    data_test = CVC('../CVC_data/test/Original',
+                      '../CVC_data/test/Ground Truth',
+                      transform=transform, target_transform=target_transform)
 
     if not dummy:
         train_loader = DataLoader(data_train,
