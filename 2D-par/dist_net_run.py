@@ -20,8 +20,8 @@ P_base = Unet_dist.P_base
 MPI.COMM_WORLD.Barrier() 
 
 parameters = [p for p in Unet_dist.parameters()]
-criterion = torch.nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(parameters, lr=1e-3)
+criterion = torch.nn.BCEWithLogitsLoss()
+optimizer = torch.optim.Adam(parameters,lr=0.0001)
 
 if P_base. rank == 0:
 	training_loader, test_loader = get_data_loaders(max_batch_size,

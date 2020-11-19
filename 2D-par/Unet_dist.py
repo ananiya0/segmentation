@@ -84,7 +84,7 @@ class DistUnet2D(distdl.nn.Module):
 	#				out_channels=1, 
 	#				kernel_size=(1,1))
 
-        self.out = distdl.DistributedNetworkOutput(P_conv)
+        self.out = DistributedNetworkOutput(P_conv)
 
     def forward(self, img):
 

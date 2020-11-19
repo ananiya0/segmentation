@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 1 node, 1 mpi task, 4 cores (or openMP threads) available for that task
-#SBATCH -N 1 --ntasks-per-node=1 -c 4
+#SBATCH -N 1 --exclusive --ntasks-per-node=4 -c 4
 #SBATCH -t 02:30:00
 #SBATCH -p normal_q
 
@@ -17,4 +17,4 @@ cd $SLURM_SUBMIT_DIR
 #module load PyTorch/1.6.0-gomkl-2020a-Python-3.8.2
 #module load mpi4py/3.0.2-gompi-2020a-timed-pingpong
 
-mpirun -np 1 --map-by ppr:1:L3cache --bind-to l3cache -x OMP_NUM_THREADS=4 python dist_net_run.py
+mpirun -np 4 -x OMP_NUM_THREADS=1 python dist_net_run.py
