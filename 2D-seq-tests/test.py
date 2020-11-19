@@ -1,6 +1,6 @@
 from PIL.Image import NEAREST
 from torch.utils.data.dataloader import DataLoader
-from torchvision import transforms
+from torchvision import transforms, datasets
 from torchvision.utils import save_image
 from cvcloader import CVC
 import torch
@@ -20,8 +20,8 @@ target_transform = transforms.Compose([
 Unet = Unet()
 Unet.load_state_dict(torch.load("./UNET.pt"))
 
-test_set = CVC("../CVC_data/test/Original","../CVC_data/test/Ground Truth",
-    transform=transform,target_transform=target_transform)
+test_set = datasets.ImageFolder('The_Korean_Lucky_Bird_(182632069).jpeg',
+    transform=transform)
 
 test = DataLoader(test_set,batch_size=1,shuffle=True)
 
