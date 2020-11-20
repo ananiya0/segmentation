@@ -63,7 +63,7 @@ class DistUnet2D(distdl.nn.Module):
     # represented (psamp_conv) would be instead replaced with
     # distributed conv 2d's with even kernel_size and stride,
     # but distdl has an issue with that at the moment.
-        self.upsample1 = distdl.nn.DistributedUpsample(P_conv)
+        self.upsample1 = distdl.nn.DistributedUpsample(P_conv, scale_factor=2)
         self.psamp_conv1 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=1024,
                                                 out_channels=512,
@@ -71,7 +71,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 stride=(1,1))
         self.up_conv1 = dual_conv(P_conv, 1024, 512)
 
-        self.upsample2 = distdl.nn.DistributedUpsample(P_conv)
+        self.upsample2 = distdl.nn.DistributedUpsample(P_conv, scale_factor=2)
         self.psamp_conv2 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=512,
                                                 out_channels=256,
@@ -79,7 +79,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 stride=(1,1))
         self.up_conv2 = dual_conv(P_conv, 512, 256)
 
-        self.upsample3 = distdl.nn.DistributedUpsample(P_conv)
+        self.upsample3 = distdl.nn.DistributedUpsample(P_conv, scale_factor=2)
         self.psamp_conv3 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=256,
                                                 out_channels=128,
@@ -87,7 +87,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 stride=(1,1))
         self.up_conv3 = dual_conv(P_conv, 256, 128)
 
-        self.upsample4 = distdl.nn.DistributedUpsample(P_conv)
+        self.upsample4 = distdl.nn.DistributedUpsample(P_conv, scale_factor=2)
         self.psamp_conv4 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=128,
                                                 out_channels=64,
