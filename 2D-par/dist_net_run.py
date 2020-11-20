@@ -20,6 +20,10 @@ P_base = Unet_dist.P_base
 MPI.COMM_WORLD.Barrier() 
 
 parameters = [p for p in Unet_dist.parameters()]
+
+if not parameters:
+    parameters = [torch.nn.Parameter(torch.zeros(1))]
+
 criterion = torch.nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam(parameters,lr=0.0001)
 

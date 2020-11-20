@@ -38,8 +38,15 @@ class DistUnet2D(distdl.nn.Module):
         P_base = P_world.create_partition_inclusive(np.arange(4))
         self.P_base = P_base
 
+        # Partition used for input/output
+        P_0 = P_base.create_partition_inclusive([0])
+        P_root = P_0.create_cartesian_topology_partition([1, 1, 1, 1])
+
         # Layers needed as given in 2D seq example
         P_conv = P_base.create_cartesian_topology_partition([1, 1, 2, 2])
+
+        # Maps input from one worker to the feature workers
+        self.input_map = distdl.nn.DistributedTranspose(P_root, P_conv)
 
         # UNET LEFT SIDE
         self.dwn_conv1 = dual_conv(P_conv,3,64)
@@ -88,7 +95,9 @@ class DistUnet2D(distdl.nn.Module):
 
     def forward(self, img):
 
-        x1 = self.dwn_conv1(img)
+        x = self.input_map(img)
+
+        x1 = self.dwn_conv1(x)
         x2 = self.maxpool(x1)
         x3 = self.dwn_conv2(x2)
         x4 = self.maxpool(x3)

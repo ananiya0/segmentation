@@ -1,5 +1,6 @@
 # Adapted from https://github.com/activatedgeek/LeNet-5/blob/master/run.py
 # ---
+import torch
 import numpy as np
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
@@ -24,8 +25,8 @@ class DummyLoader:
 
     def __iter__(self):
         for i in range(self.n_batches):
-            yield distdl.utilities.torch.NoneTensor(), np.zeros(self.batch_size)
-        yield distdl.utilities.torch.NoneTensor(), np.zeros(self.mod_batch_size)
+            yield distdl.utilities.torch.zero_volume_tensor(self.batch_size), torch.zeros(self.batch_size)
+        yield distdl.utilities.torch.zero_volume_tensor(self.mod_batch_size), torch.zeros(self.mod_batch_size)
 
 
 def get_data_loaders(batch_size, download=False, dummy=False):
@@ -57,8 +58,8 @@ def get_data_loaders(batch_size, download=False, dummy=False):
                                  batch_size=batch_size,
                                  num_workers=1)
     else:
-        train_loader = DummyLoader(batch_size, 60000)
-        test_loader = DummyLoader(batch_size, 10000)
+        train_loader = DummyLoader(batch_size, 491)
+        test_loader = DummyLoader(batch_size, 123)
 
     return train_loader, test_loader
 
