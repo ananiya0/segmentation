@@ -68,7 +68,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 in_channels=1024,
                                                 out_channels=512,
                                                 kernel_size=(3,3),
-                                                stride=(1,1))
+                                                padding=(1,1))
         self.up_conv1 = dual_conv(P_conv, 1024, 512)
 
         self.upsample2 = distdl.nn.DistributedUpsample(P_conv, scale_factor=2)
@@ -76,7 +76,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 in_channels=512,
                                                 out_channels=256,
                                                 kernel_size=(3,3),
-                                                stride=(1,1))
+                                                padding=(1,1))
         self.up_conv2 = dual_conv(P_conv, 512, 256)
 
         self.upsample3 = distdl.nn.DistributedUpsample(P_conv, scale_factor=2)
@@ -84,7 +84,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 in_channels=256,
                                                 out_channels=128,
                                                 kernel_size=(3,3),
-                                                stride=(1,1))
+                                                padding=(1,1))
         self.up_conv3 = dual_conv(P_conv, 256, 128)
 
         self.upsample4 = distdl.nn.DistributedUpsample(P_conv, scale_factor=2)
@@ -92,7 +92,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 in_channels=128,
                                                 out_channels=64,
                                                 kernel_size=(3,3),
-                                                stride=(1,1))
+                                                padding=(1,1))
         self.up_conv4 = dual_conv(P_conv, 128, 64)
 
     #output
