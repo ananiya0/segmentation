@@ -9,7 +9,7 @@ from network import gen_dist_net
 
 Unet_dist = gen_dist_net()
 
-max_batch_size = 256
+max_batch_size = 1
 
 n_epochs = 10
 
@@ -48,6 +48,8 @@ for epoch in range(n_epochs):
 
         optimizer.zero_grad()
 
+        print(P_base.rank, "A", epoch, i); import sys; sys.stdout.flush()
+
         # Currently, the exchange algorithm cannot handle varied size
         # tensor inputs. So we must give each pass through the network the same
         # amount of data each time
@@ -55,6 +57,7 @@ for epoch in range(n_epochs):
             break
 
         output = Unet_dist(images)
+        print(P_base.rank, "B", epoch, i); import sys; sys.stdout.flush()
 
         # Compute the loss after forward prop. For now, we do this on rank 0 because
         # CrossEntropy is nonlinear, meaning it cannot be simply sumreduced across
