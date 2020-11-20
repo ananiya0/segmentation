@@ -97,10 +97,12 @@ class DistUnet2D(distdl.nn.Module):
 
     #output
 
-        self.out = distdl.nn.DistributedConv2d(P_conv,
+        self.out_conv = distdl.nn.DistributedConv2d(P_conv,
                     in_channels=64,
                     out_channels=1,
                     kernel_size=(1,1))
+
+        self.output_map = distdl.nn.DistributedTranspose(P_conv, P_root)
 
         self.out = DistributedNetworkOutput(P_conv)
 
@@ -137,6 +139,8 @@ class DistUnet2D(distdl.nn.Module):
         x = self.psamp_conv4(x)
         x = self.up_conv4(torch.cat([x,x1], 1))
 
+        x = self.out_conv(x)
+        x = self.output_map(x)
         x = self.out(x)
 
         return x
