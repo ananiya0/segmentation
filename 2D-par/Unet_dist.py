@@ -52,37 +52,48 @@ class DistUnet2D(distdl.nn.Module):
 							stride=(2,2))
 
 	# UNET RIGHT SIDE
-        self.trans1 = distdl.nn.DistributedConv2d(P_conv,
-        					in_channels=1024,
-						out_channels=512,
-						kernel_size=(2,2),
-						stride=(2,2))
+	# Ideally, these upsamps followed by post upsample convolutions
+	# represented (psamp_conv) would be instead replaced with
+	# distributed conv 2d's with even kernel_size and stride,
+	# but distdl has an issue with that at the moment.
+        self.upsample1 = distdl.nn.DistributedUpsample(P_conv)
+        self.psamp_conv1 = distdl.nn.DistributedConv2d(P_conv,
+                                                in_channels=1024,
+                                                out_channels=512,
+                                                kernel_size=(3,3),
+                                                stride=(1,1))
         self.up_conv1 = dual_conv(P_conv, 1024, 512)
-        self.trans2 = distdl.nn.DistributedConv2d(P_conv,
+        
+        self.upsample2 = distdl.nn.DistributedUpsample(P_conv)
+        self.psamp_conv2 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=512,
                                                 out_channels=256,
-                                                kernel_size=(2,2),
-                                                stride=(2,2))
+                                                kernel_size=(3,3),
+                                                stride=(1,1))
         self.up_conv2 = dual_conv(P_conv, 512, 256)
-        self.trans3 = distdl.nn.DistributedConv2d(P_conv,
+        
+        self.upsample3 = distdl.nn.DistributedUpsample(P_conv)
+        self.psamp_conv3 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=256,
                                                 out_channels=128,
-                                                kernel_size=(2,2),
-                                                stride=(2,2))
+                                                kernel_size=(3,3),
+                                                stride=(1,1))
         self.up_conv3 = dual_conv(P_conv, 256, 128)
-        self.trans4 = distdl.nn.DistributedConv2d(P_conv,
+        
+        self.upsample4 = distdl.nn.DistributedUpsample(P_conv)
+        self.psamp_conv4 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=128,
                                                 out_channels=64,
-                                                kernel_size=(2,2),
-                                                stride=(2,2))
+                                                kernel_size=(3,3),
+                                                stride=(1,1))
         self.up_conv4 = dual_conv(P_conv, 128, 64)
 
 	#output
 
-	#self.out = distdl.nn.DistributedConv2d(P_conv, 
-	#				in_channels=64, 
-	#				out_channels=1, 
-	#				kernel_size=(1,1))
+        self.out = distdl.nn.DistributedConv2d(P_conv, 
+					in_channels=64, 
+					out_channels=1, 
+					kernel_size=(1,1))
 
         self.out = DistributedNetworkOutput(P_conv)
 
@@ -101,16 +112,20 @@ class DistUnet2D(distdl.nn.Module):
 	# forward for left side
 
 	#forward pass for Right side
-        x = self.trans1(x9)
+        x = self.upsample1(x9)
+	x = self.psamp_conv1(x)
         x = self.up_conv1(torch.cat([x,x7], 1))
         
-        x = self.trans2(x)
+        x = self.upsample2(x)
+	x = self.psamp_conv2(x)
         x = self.up_conv2(torch.cat([x,x5], 1))
 
-        x = self.trans3(x)
+        x = self.upsample3(x)
+	x = self.psamp_conv3(x)
         x = self.up_conv3(torch.cat([x,x3], 1))
  
-        x = self.trans4(x)
+        x = self.upsample4(x)
+	x = self.psamp_conv4(x)
         x = self.up_conv4(torch.cat([x,x1], 1))
 
         x = self.out(x)

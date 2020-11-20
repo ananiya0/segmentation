@@ -20,10 +20,13 @@ P_base = Unet_dist.P_base
 MPI.COMM_WORLD.Barrier() 
 
 parameters = [p for p in Unet_dist.parameters()]
+print(P_base.rank, len(parameters))
+sys.stdout.flush()
+assert 0
 criterion = torch.nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam(parameters,lr=0.0001)
 
-if P_base. rank == 0:
+if P_base.rank == 0:
 	training_loader, test_loader = get_data_loaders(max_batch_size,
 							download=False,
 							dummy=False)
@@ -31,6 +34,9 @@ else:
 	training_loader, test_loader = get_data_loaders(max_batch_size,
 							download=False,
 							dummy=True)
+print(P_base.rank, len(parameters))
+sys.stdout.flush()
+assert 0
 
 # Adapted from https://github.com/activatedgeek/LeNet-5/blob/master/run.py
 
