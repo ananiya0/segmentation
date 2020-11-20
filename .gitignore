@@ -4,3 +4,4 @@ practice/data/
 2D-seq/*.png
 *.vscode/
 *.pt
+__pycache__

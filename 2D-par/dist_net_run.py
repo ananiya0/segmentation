@@ -9,7 +9,7 @@ from network import gen_dist_net
 
 Unet_dist = gen_dist_net()
 
-max_batch_size = 256
+max_batch_size = 1
 
 n_epochs = 10
 
@@ -17,26 +17,24 @@ loud = True
 
 P_base = Unet_dist.P_base
 
-MPI.COMM_WORLD.Barrier() 
+MPI.COMM_WORLD.Barrier()
 
 parameters = [p for p in Unet_dist.parameters()]
-print(P_base.rank, len(parameters))
-sys.stdout.flush()
-assert 0
+
+if not parameters:
+    parameters = [torch.nn.Parameter(torch.zeros(1))]
+
 criterion = torch.nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam(parameters,lr=0.0001)
 
 if P_base.rank == 0:
-	training_loader, test_loader = get_data_loaders(max_batch_size,
-							download=False,
-							dummy=False)
-else: 
-	training_loader, test_loader = get_data_loaders(max_batch_size,
-							download=False,
-							dummy=True)
-print(P_base.rank, len(parameters))
-sys.stdout.flush()
-assert 0
+    training_loader, test_loader = get_data_loaders(max_batch_size,
+                            download=False,
+                            dummy=False)
+else:
+    training_loader, test_loader = get_data_loaders(max_batch_size,
+                            download=False,
+                            dummy=True)
 
 # Adapted from https://github.com/activatedgeek/LeNet-5/blob/master/run.py
 
