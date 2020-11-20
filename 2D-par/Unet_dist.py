@@ -8,11 +8,11 @@ from layers import DistributedNetworkOutput
 
 def dual_conv(P_in, in_channels, out_channels):
     conv = nn.Sequential(
-        distdl.nn.DistributedConv2d(P_in, 
-			in_channels=in_channels, 
-			out_channels=out_channels,
-			kernel_size=(3,3), 
-        		padding=(1,1)),
+        distdl.nn.DistributedConv2d(P_in,
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=(3,3),
+                padding=(1,1)),
         distdl.nn.DistributedBatchNorm(P_in, num_features=out_channels),
         nn.ReLU(True),
         distdl.nn.DistributedConv2d(P_in,
@@ -54,15 +54,15 @@ class DistUnet2D(distdl.nn.Module):
         self.dwn_conv3 = dual_conv(P_conv,128,256)
         self.dwn_conv4 = dual_conv(P_conv,256,512)
         self.dwn_conv5 = dual_conv(P_conv,512,1024)
-        self.maxpool = distdl.nn.DistributedMaxPool2d(P_conv, 
-        						kernel_size=(2,2),
-							stride=(2,2))
+        self.maxpool = distdl.nn.DistributedMaxPool2d(P_conv,
+                                kernel_size=(2,2),
+                            stride=(2,2))
 
-	# UNET RIGHT SIDE
-	# Ideally, these upsamps followed by post upsample convolutions
-	# represented (psamp_conv) would be instead replaced with
-	# distributed conv 2d's with even kernel_size and stride,
-	# but distdl has an issue with that at the moment.
+    # UNET RIGHT SIDE
+    # Ideally, these upsamps followed by post upsample convolutions
+    # represented (psamp_conv) would be instead replaced with
+    # distributed conv 2d's with even kernel_size and stride,
+    # but distdl has an issue with that at the moment.
         self.upsample1 = distdl.nn.DistributedUpsample(P_conv)
         self.psamp_conv1 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=1024,
@@ -70,7 +70,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 kernel_size=(3,3),
                                                 stride=(1,1))
         self.up_conv1 = dual_conv(P_conv, 1024, 512)
-        
+
         self.upsample2 = distdl.nn.DistributedUpsample(P_conv)
         self.psamp_conv2 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=512,
@@ -78,7 +78,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 kernel_size=(3,3),
                                                 stride=(1,1))
         self.up_conv2 = dual_conv(P_conv, 512, 256)
-        
+
         self.upsample3 = distdl.nn.DistributedUpsample(P_conv)
         self.psamp_conv3 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=256,
@@ -86,7 +86,7 @@ class DistUnet2D(distdl.nn.Module):
                                                 kernel_size=(3,3),
                                                 stride=(1,1))
         self.up_conv3 = dual_conv(P_conv, 256, 128)
-        
+
         self.upsample4 = distdl.nn.DistributedUpsample(P_conv)
         self.psamp_conv4 = distdl.nn.DistributedConv2d(P_conv,
                                                 in_channels=128,
@@ -95,12 +95,12 @@ class DistUnet2D(distdl.nn.Module):
                                                 stride=(1,1))
         self.up_conv4 = dual_conv(P_conv, 128, 64)
 
-	#output
+    #output
 
-        self.out = distdl.nn.DistributedConv2d(P_conv, 
-					in_channels=64, 
-					out_channels=1, 
-					kernel_size=(1,1))
+        self.out = distdl.nn.DistributedConv2d(P_conv,
+                    in_channels=64,
+                    out_channels=1,
+                    kernel_size=(1,1))
 
         self.out = DistributedNetworkOutput(P_conv)
 
@@ -118,34 +118,27 @@ class DistUnet2D(distdl.nn.Module):
         x8 = self.maxpool(x7)
         x9 = self.dwn_conv5(x8)
 
-	# forward for left side
+    # forward for left side
 
-	#forward pass for Right side
+    #forward pass for Right side
         x = self.upsample1(x9)
-	x = self.psamp_conv1(x)
+        x = self.psamp_conv1(x)
         x = self.up_conv1(torch.cat([x,x7], 1))
-        
+
         x = self.upsample2(x)
-	x = self.psamp_conv2(x)
+        x = self.psamp_conv2(x)
         x = self.up_conv2(torch.cat([x,x5], 1))
 
         x = self.upsample3(x)
-	x = self.psamp_conv3(x)
+        x = self.psamp_conv3(x)
         x = self.up_conv3(torch.cat([x,x3], 1))
- 
+
         x = self.upsample4(x)
-	x = self.psamp_conv4(x)
+        x = self.psamp_conv4(x)
         x = self.up_conv4(torch.cat([x,x1], 1))
 
         x = self.out(x)
 
         return x
-
-
-
-
-
-
-
 
 
