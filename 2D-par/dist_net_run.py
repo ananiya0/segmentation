@@ -17,7 +17,7 @@ loud = True
 
 P_base = Unet_dist.P_base
 
-MPI.COMM_WORLD.Barrier() 
+MPI.COMM_WORLD.Barrier()
 
 parameters = [p for p in Unet_dist.parameters()]
 
@@ -28,16 +28,13 @@ criterion = torch.nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam(parameters,lr=0.0001)
 
 if P_base.rank == 0:
-	training_loader, test_loader = get_data_loaders(max_batch_size,
-							download=False,
-							dummy=False)
-else: 
-	training_loader, test_loader = get_data_loaders(max_batch_size,
-							download=False,
-							dummy=True)
-print(P_base.rank, len(parameters))
-sys.stdout.flush()
-assert 0
+    training_loader, test_loader = get_data_loaders(max_batch_size,
+                            download=False,
+                            dummy=False)
+else:
+    training_loader, test_loader = get_data_loaders(max_batch_size,
+                            download=False,
+                            dummy=True)
 
 # Adapted from https://github.com/activatedgeek/LeNet-5/blob/master/run.py
 
@@ -51,8 +48,6 @@ for epoch in range(n_epochs):
 
         optimizer.zero_grad()
 
-        print(P_base.rank, "A", epoch, i); import sys; sys.stdout.flush()
-
         # Currently, the exchange algorithm cannot handle varied size
         # tensor inputs. So we must give each pass through the network the same
         # amount of data each time
@@ -60,7 +55,6 @@ for epoch in range(n_epochs):
             break
 
         output = Unet_dist(images)
-        print(P_base.rank, "B", epoch, i); import sys; sys.stdout.flush()
 
         # Compute the loss after forward prop. For now, we do this on rank 0 because
         # CrossEntropy is nonlinear, meaning it cannot be simply sumreduced across
