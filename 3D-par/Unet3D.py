@@ -8,27 +8,30 @@ import distdl
 from output import DistributedNetworkOutput
 
 #double 3x3 convolution 
-def dual_conv(P_in,in_channel, out_channel):
+def dual_conv(P_in, in_channel, out_channel):
     conv = nn.Sequential(
-        distdl.nn.DistributedConv3d(P_in,in_channel, out_channel, kernel_size=3,padding=1),
-        distdl.nn.DistributedBatchNorm3d(P_in,out_channel),
-        nn.ReLU(inplace=True),
-        distdl.nn.DistributedConv3d(P_in,out_channel, out_channel, kernel_size=3,padding=1),
-        distdl.nn.DistributedBatchNorm3d(P_in,out_channel),
-        nn.ReLU(inplace=True)
+        distdl.nn.DistributedConv3d(P_in, in_channels = in_channel, 
+            out_channels = out_channel, kernel_size = 3,padding = 1),
+        distdl.nn.DistributedBatchNorm(P_in, num_features = out_channel),
+        nn.ReLU(inplace = True),
+        distdl.nn.DistributedConv3d(P_in, in_channels = out_channel, 
+            out_channels = out_channel, kernel_size = 3,padding = 1),
+        distdl.nn.DistributedBatchNorm(P_in, num_features = out_channel),
+        nn.ReLU(inplace = True)
     )
     return conv
 
-def upconv(P_in,in_channel,out_channel,kernel_size):
+def upconv(P_in, in_channel, out_channel, kernel_size):
     up = nn.Sequential(
-        distdl.nn.DistributedUpsample(P_in,scale_factor=2),
-        distdl.nn.DistributedConv3d(P_in,in_channel, out_channel, kernel_size=kernel_size)
+        distdl.nn.DistributedUpsample(P_in, scale_factor = 2),
+        distdl.nn.DistributedConv3d(P_in, in_channels = in_channel, 
+            out_channels = out_channel, kernel_size = kernel_size)
     )
     return up
 
 
 class DistUnet3D(nn.Module):
-    def __init__(self,P_World):
+    def __init__(self, P_World):
         super(DistUnet3D, self).__init__()
 
         # Setup
@@ -52,22 +55,22 @@ class DistUnet3D(nn.Module):
         self.dwn_conv3 = dual_conv(P_conv, 128, 256)
         self.dwn_conv4 = dual_conv(P_conv, 256, 512)
         self.dwn_conv5 = dual_conv(P_conv, 512, 1024)
-        self.maxpool = distdl.nn.DistributedMaxPool3d(P_conv,kernel_size=2, stride=2)
+        self.maxpool = distdl.nn.DistributedMaxPool3d(P_conv, kernel_size = 2, stride = 2)
 
         #Right side  (expansion path) 
         #transpose convolution is used shown as green arrow in architecture image
-        self.trans1 = upconv(P_conv, 1024,512, kernel_size=1)
-        self.up_conv1 = dual_conv(P_conv, 1024,512)
-        self.trans2 = upconv(P_conv, 512,256, kernel_size=1)
-        self.up_conv2 = dual_conv(P_conv, 512,256)
-        self.trans3 = upconv(P_conv, 256, 128, kernel_size=1)
-        self.up_conv3 = dual_conv(P_conv, 256,128)
-        self.trans4 = upconv(P_conv, 128,64, kernel_size=1)
-        self.up_conv4 = dual_conv(P_conv, 128,64)
+        self.trans1 = upconv(P_conv, 1024, 512, kernel_size = 1)
+        self.up_conv1 = dual_conv(P_conv, 1024, 512)
+        self.trans2 = upconv(P_conv, 512, 256, kernel_size = 1)
+        self.up_conv2 = dual_conv(P_conv, 512, 256)
+        self.trans3 = upconv(P_conv, 256, 128, kernel_size = 1)
+        self.up_conv3 = dual_conv(P_conv, 256, 128)
+        self.trans4 = upconv(P_conv, 128,64, kernel_size = 1)
+        self.up_conv4 = dual_conv(P_conv, 128, 64)
 
         #output layer
-        self.out_conv = distdl.nn.DistributedConv3d(P_conv, 64, 1, kernel_size=1)
-        self.output_map = distdl.nn.DistributedTranspose(P_conv,P_root)
+        self.out_conv = distdl.nn.DistributedConv3d(P_conv, 64, 1, kernel_size = 1)
+        self.output_map = distdl.nn.DistributedTranspose(P_conv, P_root)
         self.out = DistributedNetworkOutput(P_conv)
 
     def forward(self, image):

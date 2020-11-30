@@ -1,5 +1,5 @@
 from mpi4py import MPI
-from unet3d import DistUnet3D
+from Unet3D import DistUnet3D
 
 import distdl
 

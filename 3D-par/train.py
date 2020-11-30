@@ -1,4 +1,3 @@
-from unet3d import Unet3d
 import torch
 import torch.nn as nn
 import numpy as np
