@@ -5,6 +5,7 @@ from implicit import ImplicitEllipse,ImplicitUnion
 from PIL import Image
 from gen_dist_net import gen_dist_net
 from mpi4py import MPI
+import distdl
 
 SMOOTH = 1e-6
 
@@ -75,7 +76,7 @@ parameters = [p for p in unet.parameters()]
 if not parameters:
     parameters = [torch.nn.Parameter(torch.zeros(1))]
 
-optimizer = torch.optim.Adam(unet.parameters(),lr=0.0001)
+optimizer = torch.optim.Adam(parameters,lr=0.0001)
 criterion = nn.BCEWithLogitsLoss()
 
 n_img = 50
