@@ -79,6 +79,7 @@ optimizer = torch.optim.Adam(unet.parameters(),lr=0.0001)
 criterion = nn.BCEWithLogitsLoss()
 
 n_img = 50
+batch_size = 1
 
 for i in range(n_img):
     if P_base.rank == 0:
@@ -99,8 +100,8 @@ for i in range(n_img):
         img = torch.from_numpy(image_blended).float()[None,None,:,:,:]
         mask = torch.from_numpy(segmentation_target).float()[None,None,:,:,:]
     else:
-        img = distdl.utilities.torch.zero_volume_tensor(1)
-        mask = distdl.utilities.torch.zero_volume_tensor(1)
+        img = distdl.utilities.torch.zero_volume_tensor(batch_size)
+        mask = distdl.utilities.torch.zero_volume_tensor(batch_size)
 
     optimizer.zero_grad()
 

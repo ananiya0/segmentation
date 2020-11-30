@@ -1,7 +1,6 @@
 # Adapted from https://github.com/spctr01/UNet/blob/master/Unet.py
 import torch
 import torch.nn as nn
-import torch.nn.functional as fnn
 import numpy as np
 from mpi4py import MPI
 import distdl
@@ -36,7 +35,7 @@ class DistUnet3D(nn.Module):
 
         # Setup
         P_World._comm.Barrier()
-        P_base = P_World.create_partition_inclusive(np.arange(4))
+        P_base = P_World.create_partition_inclusive(np.arange(8))
         self.P_base = P_base
 
         # Partition used for input/output
@@ -69,7 +68,7 @@ class DistUnet3D(nn.Module):
         self.up_conv4 = dual_conv(P_conv, 128, 64)
 
         #output layer
-        self.out_conv = distdl.nn.DistributedConv3d(P_conv, 64, 1, kernel_size = 1)
+        self.out_conv = distdl.nn.DistributedConv3d(P_conv, in_channels = 64, out_channels = 1, kernel_size = 1)
         self.output_map = distdl.nn.DistributedTranspose(P_conv, P_root)
         self.out = DistributedNetworkOutput(P_conv)
 
