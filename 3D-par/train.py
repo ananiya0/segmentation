@@ -4,6 +4,7 @@ import numpy as np
 from implicit import ImplicitEllipse,ImplicitUnion
 from PIL import Image
 from gen_dist_net import gen_dist_net
+import matplotlib.pyplot as plt
 from mpi4py import MPI
 import distdl
 
@@ -37,6 +38,14 @@ def random_ellipses(n, d, r_shift=0.3, r_fac=0.01):
         Es.append(ImplicitEllipse(c, a, r))
 
     return ImplicitUnion(*Es)       
+
+def best_slice(volume):
+    max = 0
+    for i in range(np.size(volume,0)):
+        area = np.mean(volume[max,:,:])
+        new_area = np.mean(volume[i,:,:])
+        max = i * (new_area > area) + max * (area >= new_area)
+    return max
 
 
 x = np.linspace(0, 1, 64)
@@ -81,9 +90,11 @@ criterion = nn.BCEWithLogitsLoss()
 
 n_img = 50
 batch_size = 1
+iter = 0
 
 for i in range(n_img):
     if P_base.rank == 0:
+        iter += 1
         shape_target = random_ellipses(n_ellipses_target, dim)
 
         value_target = shape_target(grid)
@@ -118,4 +129,24 @@ for i in range(n_img):
     loss.backward()
     optimizer.step()
 
+    if P_base.rank == 0:
+        if iter%10 == 0:
+            sig = nn.Sigmoid()
+            out = sig(out)
+            out = out > 0.5
+            mask = mask > 0
+
+            out = np.squeeze(out.detach().numpy())
+            mask = np.squeeze(mask.detach().numpy())
+
+            i = best_slice(mask)
+            plt.figure()
+            plt.subplot(1,2,1)
+            plt.imshow(mask[i,:,:])
+            plt.colorbar()
+            plt.subplot(1,2,2)
+            plt.imshow(out[i,:,:])
+            plt.colorbar()
+            plt.tight_layout()
+            plt.savefig("plot.png")
 

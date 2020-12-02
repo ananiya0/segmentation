@@ -1,9 +1,11 @@
+from gen_dist_net import gen_dist_net
 from implicit import ImplicitEllipse, ImplicitUnion
-from unet3d import Unet3d
 import torch
 import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
+from mpi4py import MPI
+import distdl
 
 def iou(outputs: torch.Tensor, labels: torch.Tensor):
     SMOOTH = 1e-6
@@ -74,47 +76,55 @@ mask = torch.from_numpy(segmentation_target).float()
 
 n_img = 5
 
-unet = Unet3d()
-unet.load_state_dict(torch.load("./UNET3d.pt"))
+unet = gen_dist_net()
+P_base = unet.P_base
+unet.load_state_dict(torch.load("./UNET3D.pt"))
+
+MPI.COMM_WORLD.Barrier()
 
 for i in range(n_img):
-    shape_target = random_ellipses(n_ellipses_target, dim)
+    if P_base.rank == 0:
+        shape_target = random_ellipses(n_ellipses_target, dim)
 
-    value_target = shape_target(grid)
-    segmentation_target = shape_target.interior(grid, True)
-    image_target = -1*value_target*segmentation_target
+        value_target = shape_target(grid)
+        segmentation_target = shape_target.interior(grid, True)
+        image_target = -1*value_target*segmentation_target
 
-    shape_noise = random_ellipses(n_ellipses_noise, dim, 0.2, 0.1)
-    value_noise = shape_noise(grid)
+        shape_noise = random_ellipses(n_ellipses_noise, dim, 0.2, 0.1)
+        value_noise = shape_noise(grid)
 
-    segmentation_noise = shape_noise.interior(grid, True)
-    image_noise = -1*value_noise*segmentation_noise
+        segmentation_noise = shape_noise.interior(grid, True)
+        image_noise = -1*value_noise*segmentation_noise
 
-    image_blended = image_target + 0.3*image_noise
+        image_blended = image_target + 0.3*image_noise
 
-    img = torch.from_numpy(image_blended).float()
-    mask = torch.from_numpy(segmentation_target).float()[None,None,:,:,:]
+        img = torch.from_numpy(image_blended).float()[None,None,:,:,:]
+        mask = torch.from_numpy(segmentation_target).float()[None,None,:,:,:]
+    else:
+        img = distdl.utilities.torch.zero_volume_tensor(1)
+        mask = distdl.utilities.torch.zero_volume_tensor(1)
 
-    out = unet(img[None,None,:,:,:])
+    out = unet(img)
 
     sig = nn.Sigmoid()
     out = sig(out)
     out = out > 0.5
     mask = mask > 0
 
-    print("IOU: ",iou(out,mask))
+    if P_base.rank == 0:
+        print("IOU: ",iou(out,mask))
 
-    out = np.squeeze(out.detach().numpy())
-    mask = np.squeeze(mask.detach().numpy())
+        out = np.squeeze(out.detach().numpy())
+        mask = np.squeeze(mask.detach().numpy())
 
-    i = best_slice(mask)
-    print(i)
-    plt.figure()
-    plt.subplot(1,2,1)
-    plt.imshow(mask[i,:,:])
-    plt.colorbar()
-    plt.subplot(1,2,2)
-    plt.imshow(out[i,:,:])
-    plt.colorbar()
-    plt.tight_layout()
-    plt.savefig("plot2.png")
+        i = best_slice(mask)
+        print(i)
+        plt.figure()
+        plt.subplot(1,2,1)
+        plt.imshow(mask[i,:,:])
+        plt.colorbar()
+        plt.subplot(1,2,2)
+        plt.imshow(out[i,:,:])
+        plt.colorbar()
+        plt.tight_layout()
+        plt.savefig("plot2.png")
