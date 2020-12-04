@@ -37,7 +37,33 @@ def random_ellipses(n, d, r_shift=0.3, r_fac=0.01):
 
         Es.append(ImplicitEllipse(c, a, r))
 
-    return ImplicitUnion(*Es)       
+    return ImplicitUnion(*Es)
+
+
+def gen_data(grid, n_ellipses, n_noise, dim):
+    n_ellipses_target = n_ellipses
+    n_ellipses_noise = n_noise
+    dim = dim
+
+    shape_target = random_ellipses(n_ellipses_target, dim)
+
+    value_target = shape_target(grid)
+    segmentation_target = shape_target.interior(grid, True)
+    image_target = -1*value_target*segmentation_target
+
+    shape_noise = random_ellipses(n_ellipses_noise, dim, 0.2, 0.1)
+    value_noise = shape_noise(grid)
+
+    segmentation_noise = shape_noise.interior(grid, True)
+    image_noise = -1*value_noise*segmentation_noise
+
+    image_blended = image_target + 0.3*image_noise
+
+    img = torch.from_numpy(image_blended).float()[None,None,:,:,:]
+    mask = torch.from_numpy(segmentation_target).float()[None,None,:,:,:]
+
+    return img,mask
+
 
 def best_slice(volume):
     max = 0
@@ -48,32 +74,11 @@ def best_slice(volume):
     return max
 
 
-x = np.linspace(0, 1, 64)
-y = np.linspace(0, 1, 64)
-z = np.linspace(0, 1, 64)
+x = np.linspace(0, 1, 96)
+y = np.linspace(0, 1, 192)
+z = np.linspace(0, 1, 192)
 
 grid = np.meshgrid(x, y, z)
-
-n_ellipses_target = 3
-n_ellipses_noise = 2
-dim = 3
-
-shape_target = random_ellipses(n_ellipses_target, dim)
-
-value_target = shape_target(grid)
-segmentation_target = shape_target.interior(grid, True)
-image_target = -1*value_target*segmentation_target
-
-shape_noise = random_ellipses(n_ellipses_noise, dim, 0.2, 0.1)
-value_noise = shape_noise(grid)
-
-segmentation_noise = shape_noise.interior(grid, True)
-image_noise = -1*value_noise*segmentation_noise
-
-image_blended = image_target + 0.3*image_noise
-
-img = torch.from_numpy(image_blended).float()
-mask = torch.from_numpy(segmentation_target).float()
 
 unet = gen_dist_net()
 P_base = unet.P_base
@@ -89,28 +94,21 @@ optimizer = torch.optim.Adam(parameters,lr=0.0001)
 criterion = nn.BCEWithLogitsLoss()
 
 n_img = 50
-batch_size = 1
+batch_size = 3
 iter = 0
+
+start = MPI.Wtime()
 
 for i in range(n_img):
     if P_base.rank == 0:
         iter += 1
-        shape_target = random_ellipses(n_ellipses_target, dim)
+        img,mask = gen_data(grid,3,2,3)
 
-        value_target = shape_target(grid)
-        segmentation_target = shape_target.interior(grid, True)
-        image_target = -1*value_target*segmentation_target
+        for batch in range(batch_size-1):
+            img1,mask1 = gen_data(grid,3,2,3)
 
-        shape_noise = random_ellipses(n_ellipses_noise, dim, 0.2, 0.1)
-        value_noise = shape_noise(grid)
-
-        segmentation_noise = shape_noise.interior(grid, True)
-        image_noise = -1*value_noise*segmentation_noise
-
-        image_blended = image_target + 0.3*image_noise
-
-        img = torch.from_numpy(image_blended).float()[None,None,:,:,:]
-        mask = torch.from_numpy(segmentation_target).float()[None,None,:,:,:]
+            img = torch.cat([img,img1],dim=0)
+            mask = torch.cat([mask,mask1],dim=0)
     else:
         img = distdl.utilities.torch.zero_volume_tensor(batch_size)
         mask = distdl.utilities.torch.zero_volume_tensor(batch_size)
@@ -136,17 +134,22 @@ for i in range(n_img):
             out = out > 0.5
             mask = mask > 0
 
-            out = np.squeeze(out.detach().numpy())
-            mask = np.squeeze(mask.detach().numpy())
+            out = np.squeeze(out.detach()[0].numpy())
+            mask = np.squeeze(mask.detach()[0].numpy())
 
             i = best_slice(mask)
             plt.figure()
+
             plt.subplot(1,2,1)
             plt.imshow(mask[i,:,:])
-            plt.colorbar()
+            plt.colorbar(fraction=0.046, pad=0.04)
+
             plt.subplot(1,2,2)
             plt.imshow(out[i,:,:])
-            plt.colorbar()
+            plt.colorbar(fraction=0.046, pad=0.04)
+
             plt.tight_layout()
             plt.savefig("plot.png")
 
+if P_base.rank == 0:
+    print(MPI.Wtime() - start, " seconds elapsed")
