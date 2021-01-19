@@ -2,9 +2,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from implicit import ImplicitEllipse,ImplicitUnion
-from PIL import Image
 from gen_dist_net import gen_dist_net
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from mpi4py import MPI
 import distdl
 
@@ -74,9 +73,9 @@ def best_slice(volume):
     return max
 
 
-x = np.linspace(0, 1, 96)
-y = np.linspace(0, 1, 192)
-z = np.linspace(0, 1, 192)
+x = np.linspace(0, 1, 64)
+y = np.linspace(0, 1, 64)
+z = np.linspace(0, 1, 64)
 
 grid = np.meshgrid(x, y, z)
 
@@ -94,7 +93,7 @@ optimizer = torch.optim.Adam(parameters,lr=0.0001)
 criterion = nn.BCEWithLogitsLoss()
 
 n_img = 50
-batch_size = 3
+batch_size = 1
 iter = 0
 
 start = MPI.Wtime()
@@ -127,7 +126,7 @@ for i in range(n_img):
     loss.backward()
     optimizer.step()
 
-    if P_base.rank == 0:
+    """ if P_base.rank == 0:
         if iter%10 == 0:
             sig = nn.Sigmoid()
             out = sig(out)
@@ -149,7 +148,7 @@ for i in range(n_img):
             plt.colorbar(fraction=0.046, pad=0.04)
 
             plt.tight_layout()
-            plt.savefig("plot.png")
+            plt.savefig("plot.png") """
 
 if P_base.rank == 0:
     print(MPI.Wtime() - start, " seconds elapsed")
